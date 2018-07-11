@@ -1,17 +1,88 @@
 require("dotenv").config();
+var keys = require("./keys.js");
+
+var fs = require("fs");
+var inquirer = require('inquirer');
+var request = require("request");
+
 
 var Twitter = require('twitter');
 var Spotify = require('node-spotify-api');
 
-var keys = require("./keys.js");
 
-//console.log(keys.twitter);
-//console.log(keys.spotify);
+// Make it so liri.js can take in one of the following commands:
+// * `my-tweets`
+// * `spotify-this-song`
+// * `movie-this`
+// * `do-what-it-says`
+// Using a switch case below for program flow and control
 
-//var client = new Twitter(keys.twitter);
-var spotify = new Spotify(keys.spotify);
+switch(process.argv[2]) {
 
-//var spotify = new Spotify(keys.spotify);
+    case "my-tweets":
+        twitterThis();
+        logFile("Tweets");
+    break;
+
+    case "spotify-this-song":
+        if (process.argv[3] == null) {
+            spotifyThis("The sign");
+            logFile("The Sign");
+            break;
+        } else {
+            spotifyThis(process.argv[3]);
+            logFile(process.argv[3]);
+            break;
+          } 
+
+    case "movie-this": 
+        if (process.argv[3] == null) {
+            movieThis("Mr. Nobody");
+            logFile("Mr. Nobody");
+            break;
+        } else {
+            movieThis(process.argv[3]);
+            logFile(process.argv[3]);
+            break;
+          } 
+
+    case "do-what-it-says":
+        doWhat();
+        logFile("Did what it said to do!");
+        break;    
+    }    
+
+function movieThis(movie) {
+
+// Run a request to the OMDB API with the movie specified
+var queryUrl = "http://www.omdbapi.com/?t=" + movie + "&y=&plot=Full&apikey=trilogy";
+
+request(queryUrl, function(error, response, body) {
+
+  // If the request is successful
+  if (!error && response.statusCode === 200) {
+
+    // Parse the body of the site and recover the imdbRating Responses
+    
+    console.log("\nTitle of the movie: " + JSON.parse(body).Title);
+    console.log("\nYear the movie came out: " + JSON.parse(body).Year);
+    console.log("\nIMDB Rating of the movie: " + JSON.parse(body).Ratings[0].Value);
+    console.log("\nRotten Tomatoes Rating of the movie: " + JSON.parse(body).Ratings[1].Value);
+    console.log("\nCountry where the movie was produced: " + JSON.parse(body).Country);
+    console.log("\nLanguage of the movie: " + JSON.parse(body).Language);
+    console.log("\nPlot of the movie: " + JSON.parse(body).Plot);
+    console.log("\nActors in the movie: " + JSON.parse(body).Actors + "\n");
+
+  }
+});
+
+}
+
+function twitterThis() {
+
+var client = new Twitter(keys.twitter);
+
+//For testing Twitter Key seperate from file
 
 /*var client = new Twitter({
     consumer_key: 'q3hS07D6pd69euRnx8bVKr4A2',
@@ -22,55 +93,76 @@ var spotify = new Spotify(keys.spotify);
 
 //console.log(client);
 
-//console.log("\nCompleted\n");
 
-//var params = {screen_name: 'nodejs'};
-/*var params = {screen_name: 'PaoloLaVita', count: 20};
+var params = {screen_name: 'PaoloLaVita', count: 20};
+
 client.get('statuses/user_timeline', params, function(error, tweets, response) {
   if (!error && response.statusCode === 200) {
-    //console.log(tweets);
+    console.log(tweets);
+
+    //Testing
     //console.log(response);
     //console.log("\nString= " + JSON.stringify(tweets, null, 4));
     //console.log("\nThe Tweets are: " + JSON.parse(tweets).tweettext);
     //console.log(tweets);
     //var output = JSON.stringify(tweets, null, 4);
+
+
     var itemsToIterate = tweets.slice(0).reverse();
     for (var i = 0; i < itemsToIterate.length; i++){
     console.log("\nMy Tweets are as follows: " + itemsToIterate[i].text + "\n");
   }
 }
-});*/
+});
+}
 
-//console.log("\nCompleted 2\n");
+function spotifyThis(song) {
 
-/*spotify.search({ type: 'track', query: 'All the Small Things', limit: 5 }, function(err, data) {
-  if (err) {
-    return console.log('Error occurred: ' + err);
-  }
- 
-console.log(items); 
-});*/
+  var spotify = new Spotify(keys.spotify);
 
-var song1 = "hobo humpin slobo babe";
-var song2 = "rockafeller skank";
-var song3 = "wynona's big brown beaver";
-var song4 = "who was in my room last night";
-var song5 = "Praise You";
-var song6 = "wynona's big brown beaver";
-var song7 = "hobo humpin slobo babe";
-var song8 = "rockafeller skank";
-var song9 = "wynona's big brown beaver";
+    spotify
+      .search({ type: 'track', query: song, limit: 20 })
+      .then(function(response) {
+        console.log("\nThe Artist is: " + response.tracks.items[0].album.artists[0].name);
+        console.log("\nThe Name of the Song is: " + response.tracks.items[0].name);
+        console.log("\nPreview link on Spotify: " + response.tracks.items[0].external_urls.spotify);
+        console.log("\nThe Album is called: " + response.tracks.items[0].album.name + "\n");
+      })
+      .catch(function(err) {
+        console.log(err);
+      });
 
-var query = song5;
+}
 
-spotify
-  .search({ type: 'track', query: query, limit: 1 })
-  .then(function(response) {
-    console.log("\nThe Artist is: " + response.tracks.items[0].album.artists[0].name);
-    console.log("\nThe Name of the Song is: " + response.tracks.items[0].name);
-    console.log("\nPreview link on Spotify: " + response.tracks.items[0].external_urls.spotify);
-    console.log("\nThe Album is called: " + response.tracks.items[0].album.name + "\n");
-  })
-  .catch(function(err) {
-    console.log(err);
+function doWhat() {
+
+  fs.readFile("random.txt", "utf8", function(error, data) {
+
+    // If the code experiences any errors it will log the error to the console.
+    if (error) {
+      return console.log(error);
+    }
+
+    spotifyThis(data);
+  
   });
+  
+}
+
+function logFile(log) {
+
+  // This block of code will append to the records in a file called "log.txt".
+  
+  fs.appendFile("log.txt", log + "\n", function(err) {
+  
+    // If the code experiences any errors it will log the error to the console.
+    if (err) {
+      return console.log(err);
+    }
+  
+    // Otherwise, it will print: "log.txt was updated!"
+    //console.log("log.txt was updated with " + log);
+  
+  });
+  
+  }
